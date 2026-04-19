@@ -1,0 +1,29 @@
+{
+  "name": "main-api",
+  "version": "2.0.0",
+  "description": "API principal de Emeltec — Node.js + TimescaleDB + JSONB",
+  "main": "src/server.js",
+  "scripts": {
+    "test": "node --test --test-concurrency=1 --test-isolation=none",
+    "start": "node src/server.js",
+    "dev": "node --watch src/server.js"
+  },
+  "keywords": [],
+  "author": "Emeltec",
+  "license": "ISC",
+  "type": "commonjs",
+  "dependencies": {
+    "@grpc/grpc-js": "^1.14.3",
+    "@grpc/proto-loader": "^0.8.0",
+    "bcrypt": "^6.0.0",
+    "cors": "^2.8.6",
+    "dotenv": "^17.4.1",
+    "express": "^5.2.1",
+    "express-rate-limit": "^8.3.2",
+    "helmet": "^8.1.0",
+    "jsonwebtoken": "^9.0.3",
+    "morgan": "^1.10.1",
+    "nodemailer": "^8.0.5",
+    "pg": "^8.20.0"
+  }
+}

@@ -1,0 +1,14 @@
+{
+  "Servers": {
+    "1": {
+      "Name": "TimescaleDB - Infra",
+      "Group": "Proyecto Infra",
+      "Host": "timescaledb",
+      "Port": 5432,
+      "MaintenanceDB": "db_infra",
+      "Username": "admin_infra",
+      "SSLMode": "prefer",
+      "PassFile": "/tmp/pgpassfile"
+    }
+  }
+}

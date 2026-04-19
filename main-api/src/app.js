@@ -1,0 +1,76 @@
+/**
+ * Punto central de configuracion de Express.
+ * Aqui se conectan middlewares globales, rutas de la API y la demo estatica.
+ */
+const express = require("express");
+const cors = require("cors");
+const helmet = require("helmet");
+const morgan = require("morgan");
+const rateLimit = require("express-rate-limit");
+const path = require("path");
+
+const healthRoutes = require("./routes/healthRoutes");
+const dataRoutes = require("./routes/dataRoutes");
+const catalogRoutes = require("./routes/catalogRoutes");
+const metricsRoutes = require("./routes/metricsRoutes");
+const authRoutes = require("./routes/authRoutes");
+const userRoutes = require("./routes/userRoutes");
+const errorMiddleware = require("./middlewares/errorMiddleware");
+
+const app = express();
+
+// Capa basica de seguridad HTTP.
+app.use(helmet());
+
+const allowedOrigins = (process.env.CORS_ORIGIN || "*")
+  .split(",")
+  .map((o) => o.trim());
+
+// CORS queda abierto por defecto en desarrollo, pero acepta lista blanca por variable de entorno.
+app.use(
+  cors({
+    origin: (origin, callback) => {
+      if (!origin || allowedOrigins.includes("*") || allowedOrigins.includes(origin)) {
+        return callback(null, true);
+      }
+      callback(new Error(`Origen no permitido por CORS: ${origin}`));
+    },
+  })
+);
+
+// Limite global para evitar abuso simple de la API.
+const globalLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 200,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { ok: false, message: "Demasiadas solicitudes. Intenta en 15 minutos." },
+});
+
+app.use("/api/", globalLimiter);
+app.use(express.json({ limit: "1mb" }));
+app.use(morgan(process.env.NODE_ENV === "production" ? "combined" : "dev"));
+
+// Rutas funcionales del backend.
+app.use("/api/health", healthRoutes);
+app.use("/api/data", dataRoutes);
+app.use("/api", catalogRoutes);
+app.use("/api/metrics", metricsRoutes);
+app.use("/api/auth", authRoutes);
+app.use("/api/users", userRoutes);
+
+
+/* Servir archivos estáticos desde la carpeta demo */
+// La carpeta demo se sirve como frontend liviano para pruebas manuales.
+app.use(express.static(path.join(__dirname, "..", "demo")));
+
+/* Ruta principal del HTML */
+// La raiz publica entrega la pantalla HTML de prueba.
+app.get("/", (req, res) => {
+  res.sendFile(path.join(__dirname, "..", "demo", "index.html"));
+});
+
+// Ultimo middleware: normaliza errores de cualquier ruta anterior.
+app.use(errorMiddleware);
+
+module.exports = app;

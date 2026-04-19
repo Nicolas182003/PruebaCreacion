@@ -1,0 +1,21 @@
+# Variables de entorno
+.env
+
+# Logs y datos temporales
+*.log
+data/processed_logs/
+data/failed_logs/
+data/raw_backup/
+
+# Binarios Go
+*.exe
+*.out
+*.test
+
+# Carpetas de editor
+.vscode/
+.idea/
+
+# Dependencias o basura del sistema
+.DS_Store
+Thumbs.db

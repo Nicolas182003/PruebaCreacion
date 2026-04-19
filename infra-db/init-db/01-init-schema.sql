@@ -1,0 +1,182 @@
+-- ===========================================
+-- db_infra | Schema de inicialización
+-- TimescaleDB (PostgreSQL 16)
+-- ===========================================
+
+CREATE EXTENSION IF NOT EXISTS timescaledb;
+
+-- -------------------------------------------
+-- Tablas relacionales
+-- -------------------------------------------
+
+CREATE TABLE IF NOT EXISTS empresa (
+    id           VARCHAR(10)   PRIMARY KEY,
+    nombre       VARCHAR(150)  NOT NULL,
+    rut          VARCHAR(20)   NOT NULL UNIQUE,
+    sitios       INTEGER       DEFAULT 0,
+    tipo_empresa VARCHAR(50)   NOT NULL,
+    created_at   TIMESTAMPTZ   DEFAULT NOW(),
+    updated_at   TIMESTAMPTZ   DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS sub_empresa (
+    id          VARCHAR(10)   PRIMARY KEY,
+    nombre      VARCHAR(150)  NOT NULL,
+    rut         VARCHAR(20)   NOT NULL UNIQUE,
+    sitios      INTEGER       DEFAULT 0,
+    empresa_id  VARCHAR(10)   NOT NULL REFERENCES empresa(id) ON DELETE CASCADE,
+    created_at  TIMESTAMPTZ   DEFAULT NOW(),
+    updated_at  TIMESTAMPTZ   DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS usuario (
+    id             VARCHAR(10)   PRIMARY KEY,
+    nombre         VARCHAR(100)  NOT NULL,
+    apellido       VARCHAR(100)  NOT NULL,
+    email          VARCHAR(150)  NOT NULL UNIQUE,
+    telefono       VARCHAR(20),
+    cargo          VARCHAR(80),
+    tipo           VARCHAR(30)   NOT NULL,
+    empresa_id     VARCHAR(10)   REFERENCES empresa(id) ON DELETE SET NULL,
+    sub_empresa_id VARCHAR(10)   REFERENCES sub_empresa(id) ON DELETE SET NULL,
+    created_at     TIMESTAMPTZ   DEFAULT NOW(),
+    updated_at     TIMESTAMPTZ   DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS sitio (
+    id          VARCHAR(10)   PRIMARY KEY,
+    descripcion VARCHAR(255)  NOT NULL,
+    id_serial   VARCHAR(50)   NOT NULL,
+    empresa_id  VARCHAR(10)   NOT NULL REFERENCES empresa(id) ON DELETE CASCADE,
+    ubicacion   VARCHAR(255),
+    created_at  TIMESTAMPTZ   DEFAULT NOW(),
+    updated_at  TIMESTAMPTZ   DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS reg_map (
+    id         VARCHAR(20)   PRIMARY KEY,
+    alias      VARCHAR(100)  NOT NULL,
+    d1         VARCHAR(20)   NOT NULL,
+    d2         VARCHAR(20),
+    tipo_dato  VARCHAR(20)   NOT NULL,
+    unidad     VARCHAR(20),
+    sitio_id   VARCHAR(10)   REFERENCES sitio(id) ON DELETE SET NULL,
+    created_at TIMESTAMPTZ   DEFAULT NOW(),
+    updated_at TIMESTAMPTZ   DEFAULT NOW()
+);
+
+-- -------------------------------------------
+-- Hypertable — series temporales
+-- Chunks: 1 día | ~80 equipos, hasta 1 dato/s
+-- -------------------------------------------
+
+CREATE TABLE IF NOT EXISTS equipo (
+    time        TIMESTAMPTZ  NOT NULL,
+    id_serial   VARCHAR(50)  NOT NULL,
+    data        JSONB        NOT NULL,
+    received_at TIMESTAMPTZ  DEFAULT NOW()
+);
+
+SELECT create_hypertable(
+    'equipo', 'time',
+    chunk_time_interval => INTERVAL '1 day',
+    if_not_exists       => TRUE
+);
+
+-- -------------------------------------------
+-- Índices
+-- -------------------------------------------
+
+CREATE INDEX IF NOT EXISTS idx_equipo_serial_time ON equipo (id_serial, time DESC);
+CREATE INDEX IF NOT EXISTS idx_equipo_data_gin    ON equipo USING GIN (data);
+CREATE INDEX IF NOT EXISTS idx_sitio_empresa      ON sitio (empresa_id);
+CREATE INDEX IF NOT EXISTS idx_usuario_empresa    ON usuario (empresa_id);
+CREATE INDEX IF NOT EXISTS idx_regmap_sitio       ON reg_map (sitio_id);
+
+-- -------------------------------------------
+-- Compresión automática (después de 7 días)
+-- -------------------------------------------
+
+ALTER TABLE equipo SET (
+    timescaledb.compress,
+    timescaledb.compress_segmentby = 'id_serial',
+    timescaledb.compress_orderby   = 'time DESC'
+);
+
+SELECT add_compression_policy('equipo',
+    compress_after => INTERVAL '7 days',
+    if_not_exists  => TRUE
+);
+
+-- -------------------------------------------
+-- Continuous Aggregates (día, semana, mes, año)
+-- -------------------------------------------
+
+-- Por día (refresca cada 1h)
+CREATE MATERIALIZED VIEW IF NOT EXISTS equipo_daily
+WITH (timescaledb.continuous) AS
+SELECT time_bucket('1 day', time) AS bucket, id_serial, COUNT(*) AS total_registros
+FROM equipo GROUP BY bucket, id_serial
+WITH NO DATA;
+
+SELECT add_continuous_aggregate_policy('equipo_daily',
+    start_offset => INTERVAL '3 days', end_offset => INTERVAL '1 hour',
+    schedule_interval => INTERVAL '1 hour', if_not_exists => TRUE);
+
+-- Por semana (refresca cada 3h)
+CREATE MATERIALIZED VIEW IF NOT EXISTS equipo_weekly
+WITH (timescaledb.continuous) AS
+SELECT time_bucket('1 week', time) AS bucket, id_serial, COUNT(*) AS total_registros
+FROM equipo GROUP BY bucket, id_serial
+WITH NO DATA;
+
+SELECT add_continuous_aggregate_policy('equipo_weekly',
+    start_offset => INTERVAL '3 weeks', end_offset => INTERVAL '1 hour',
+    schedule_interval => INTERVAL '3 hours', if_not_exists => TRUE);
+
+-- Por mes (refresca cada 12h)
+CREATE MATERIALIZED VIEW IF NOT EXISTS equipo_monthly
+WITH (timescaledb.continuous) AS
+SELECT time_bucket('1 month', time) AS bucket, id_serial, COUNT(*) AS total_registros
+FROM equipo GROUP BY bucket, id_serial
+WITH NO DATA;
+
+SELECT add_continuous_aggregate_policy('equipo_monthly',
+    start_offset => INTERVAL '3 months', end_offset => INTERVAL '1 hour',
+    schedule_interval => INTERVAL '12 hours', if_not_exists => TRUE);
+
+-- Por año (refresca cada 1d)
+CREATE MATERIALIZED VIEW IF NOT EXISTS equipo_yearly
+WITH (timescaledb.continuous) AS
+SELECT time_bucket('1 year', time) AS bucket, id_serial, COUNT(*) AS total_registros
+FROM equipo GROUP BY bucket, id_serial
+WITH NO DATA;
+
+SELECT add_continuous_aggregate_policy('equipo_yearly',
+    start_offset => INTERVAL '26 months', end_offset => INTERVAL '1 hour',
+    schedule_interval => INTERVAL '1 day', if_not_exists => TRUE);
+
+-- -------------------------------------------
+-- Datos de prueba
+-- -------------------------------------------
+
+INSERT INTO empresa (id, nombre, rut, sitios, tipo_empresa)
+VALUES ('E100', 'Empresa Demo SpA', '76.123.456-7', 2, 'Industrial')
+ON CONFLICT (id) DO NOTHING;
+
+INSERT INTO sitio (id, descripcion, id_serial, empresa_id, ubicacion)
+VALUES ('S100', 'Planta Principal - Sensor Temperatura', '151.65.22.2', 'E100', 'Santiago, Chile')
+ON CONFLICT (id) DO NOTHING;
+
+INSERT INTO reg_map (id, alias, d1, d2, tipo_dato, unidad, sitio_id)
+VALUES ('151.65.22.2', 'Temperatura Ambiente', 'REG1', NULL, 'FLOAT', 'T°', 'S100')
+ON CONFLICT (id) DO NOTHING;
+
+INSERT INTO equipo (time, id_serial, data) VALUES
+    (NOW() - INTERVAL '2 hours', '151.65.22.2', '{"REG1": 1500, "REG4": 23.5, "IR1": "OK"}'::jsonb),
+    (NOW() - INTERVAL '1 hour',  '151.65.22.2', '{"REG1": 1520, "REG4": 24.1, "IR1": "OK"}'::jsonb),
+    (NOW(),                       '151.65.22.2', '{"REG1": 1480, "REG4": 22.8, "IR1": "WARN"}'::jsonb);
+
+-- Verificación
+SELECT hypertable_name, num_dimensions FROM timescaledb_information.hypertables
+WHERE hypertable_name = 'equipo';
