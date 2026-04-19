@@ -49,8 +49,8 @@ El proyecto está dividido en **4 carpetas independientes**, cada una con su res
 
 ### Paso 1 — Clonar el Repositorio
 ```bash
-git clone https://github.com/TU_USUARIO/TU_REPO.git
-cd TU_REPO
+git clone https://github.com/Nicolas182003/emeltec-platform.git
+cd emeltec-platform
 ```
 
 ### Paso 2 — Levantar la Base de Datos (Docker)
@@ -116,6 +116,46 @@ El sistema utiliza un flujo de **código temporal por correo** (One-Time Passwor
 5. El usuario ingresa el código y entra al Dashboard con su rol asignado.
 
 > ⚠️ Si el correo NO fue previamente registrado por un administrador, el sistema rechaza la solicitud. Esta es la capa de seguridad principal.
+
+### 🔑 Primer inicio de sesión (después del seed)
+El script `seed_auth.js` crea 3 usuarios de prueba con la contraseña `1234`. Para entrar por primera vez:
+1. En la pantalla de Login, haz clic en **"Ya tengo un código"**.
+2. Ingresa el correo `superadmin@gmail.com` y en el campo de código escribe `1234`.
+3. Una vez dentro, podrás crear nuevos usuarios desde "Gestión de Usuarios".
+
+---
+
+## 📧 Configuración de Correos (Gmail SMTP) — MUY IMPORTANTE
+
+Para que el sistema pueda enviar códigos de acceso reales al correo de los usuarios, el backend necesita conectarse a una cuenta de Gmail que actúa como "cartero oficial" del sistema.
+
+### ¿Cómo funciona?
+El proyecto usa **Nodemailer** para enviar correos a través de los servidores de Google (SMTP). Solo se necesita configurar **UNA cuenta de Gmail remitente** y desde ahí se pueden enviar códigos a **cualquier correo** del mundo (Gmail, Hotmail, Yahoo, corporativo, etc.).
+
+### Configuración
+En el archivo `main-api/.env` debes configurar estas 4 variables:
+
+```env
+SMTP_HOST=smtp.gmail.com
+SMTP_PORT=465
+SMTP_USER=emeltecacceso@gmail.com
+SMTP_PASS=xxxx xxxx xxxx xxxx
+```
+
+> 🔒 **Las credenciales de la cuenta `emeltecacceso@gmail.com` se comparten de forma privada entre el equipo.** Solicítalas al administrador del proyecto.
+
+### ¿Cómo se obtiene el SMTP_PASS?
+No es la contraseña normal de Gmail. Es una **"Contraseña de Aplicación"** que Google genera exclusivamente para aplicaciones externas:
+1. Ingresar a la cuenta de Gmail del proyecto.
+2. Ir a [Seguridad de la cuenta](https://myaccount.google.com/security) → Activar **Verificación en 2 pasos**.
+3. Ir a [Contraseñas de Aplicaciones](https://myaccount.google.com/apppasswords).
+4. Crear una app (ej: "Panel Industrial") → Google genera 16 letras → Eso es el `SMTP_PASS`.
+
+### ¿Qué pasa si NO configuro el correo?
+Si las variables SMTP no están en el `.env`, el sistema **NO fallará**. Entrará automáticamente en **modo simulación (Ethereal)**:
+- Los correos NO llegarán a bandejas reales.
+- En la consola del backend (terminal de Node.js) aparecerá un **link azul** donde puedes ver el correo simulado en tu navegador.
+- Útil para desarrollo local sin gastar envíos reales.
 
 ---
 
