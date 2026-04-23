@@ -5,6 +5,9 @@ import { RouterOutlet } from '@angular/router';
   selector: 'app-root',
   standalone: true,
   imports: [RouterOutlet],
-  template: `<router-outlet />`
+  template: `
+    <!-- Este es el punto de entrada que cargará el LayoutComponent o el Login -->
+    <router-outlet></router-outlet>
+  `
 })
 export class AppComponent {}

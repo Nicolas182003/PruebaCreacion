@@ -4,6 +4,7 @@ import { AuthContext } from './context/AuthContext';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import UserManagement from './pages/UserManagement';
+import CompaniesView from './pages/CompaniesView';
 
 // Rutas Protegidas Centinela
 const ProtectedRoute = ({ children }) => {
@@ -27,7 +28,7 @@ const PublicRoute = ({ children }) => {
   if (loading) return null;
 
   if (user) {
-    return <Navigate to="/dashboard" replace />;
+    return <Navigate to="/companies" replace />;
   }
 
   return children;
@@ -46,6 +47,14 @@ function App() {
           } 
         />
         <Route 
+          path="/companies" 
+          element={
+            <ProtectedRoute>
+              <CompaniesView />
+            </ProtectedRoute>
+          } 
+        />
+        <Route 
           path="/dashboard" 
           element={
             <ProtectedRoute>
@@ -61,8 +70,8 @@ function App() {
             </ProtectedRoute>
           } 
         />
-        {/* Redireccionar a /dashboard por defecto, ProtectedRoute lo mandará a /login si no hay token */}
-        <Route path="*" element={<Navigate to="/dashboard" replace />} />
+        {/* Redireccionar a /companies por defecto (vista principal del SuperAdmin) */}
+        <Route path="*" element={<Navigate to="/companies" replace />} />
       </Routes>
     </BrowserRouter>
   );

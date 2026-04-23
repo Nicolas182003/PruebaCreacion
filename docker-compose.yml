@@ -1,0 +1,68 @@
+services:
+  timescaledb:
+    image: timescale/timescaledb:latest-pg16
+    container_name: emeltec-db
+    ports:
+      - "5433:5432"
+    environment:
+      POSTGRES_DB: telemetry_platform
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: admin_password
+    volumes:
+      - timescale_data:/var/lib/postgresql/data
+      - ./infra-db/init-db:/docker-entrypoint-initdb.d
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  main-api:
+    build: ./main-api
+    container_name: emeltec-api
+    ports:
+      - "3000:3000"
+    env_file:
+      - ./main-api/.env
+    environment:
+      DB_HOST: timescaledb
+      DB_PORT: 5432
+      DB_NAME: telemetry_platform
+      DB_USER: postgres
+      DB_PASSWORD: admin_password
+    depends_on:
+      timescaledb:
+        condition: service_healthy
+    restart: unless-stopped
+
+  frontend-app:
+    build: ./frontend-app
+    container_name: emeltec-frontend
+    ports:
+      - "5173:5173"
+    depends_on:
+      - main-api
+    restart: unless-stopped
+
+  csvconsumer:
+    build:
+      context: ./grpc-pipeline
+      dockerfile: csvconsumer.Dockerfile
+    container_name: emeltec-csvconsumer
+    ports:
+      - "50051:50051"
+    environment:
+      DB_HOST: timescaledb
+      DB_PORT: 5432
+      DB_NAME: telemetry_platform
+      DB_USER: postgres
+      DB_PASSWORD: admin_password
+      GRPC_PORT: 50051
+    depends_on:
+      timescaledb:
+        condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+  timescale_data:

@@ -1,75 +1,62 @@
 const db = require('../config/db');
-const bcrypt = require('bcrypt');
-const crypto = require('crypto');
+const bcrypt = require('bcryptjs');
+const emailService = require('../services/emailService'); // Importamos el servicio de correos
 
-// Retorna la lista de empresas y sub-empresas para el formulario
-exports.getEmpresas = async (req, res, next) => {
+exports.getAllUsers = async (req, res, next) => {
   try {
-    const empresasQuery = await db.query('SELECT id, nombre, tipo_empresa FROM empresa');
-    const subEmpresasQuery = await db.query('SELECT id, empresa_id, nombre FROM sub_empresa');
-    
-    // Si el usuario es 'Admin' o 'Gerente', solo puede ver estructuras de su propia empresa.
-    const rol = req.user.tipo;
-    const miEmpresa = req.user.empresa_id;
-    
-    let empresasValidas = empresasQuery.rows;
-    if (rol !== 'SuperAdmin' && miEmpresa) {
-      empresasValidas = empresasValidas.filter(e => e.id === miEmpresa);
+    const { sub_empresa_id, empresa_id } = req.query;
+    let query = 'SELECT id, nombre, email, tipo, empresa_id, sub_empresa_id FROM usuario';
+    let params = [];
+
+    if (sub_empresa_id) {
+      query += ' WHERE sub_empresa_id = $1';
+      params.push(sub_empresa_id);
+    } else if (empresa_id) {
+      query += ' WHERE empresa_id = $1';
+      params.push(empresa_id);
     }
 
-    // Anidar las sub-empresas dentro del JSON de la empresa respectiva
-    const dataConHerederos = empresasValidas.map(empresa => {
-      const hijos = subEmpresasQuery.rows.filter(se => se.empresa_id === empresa.id);
-      return { ...empresa, sub_empresas: hijos };
-    });
-
-    res.json({ ok: true, data: dataConHerederos });
-  } catch (error) {
-    next(error);
+    query += ' ORDER BY nombre ASC';
+    const { rows } = await db.query(query, params);
+    res.json({ ok: true, data: rows });
+  } catch (err) {
+    next(err);
   }
 };
 
-// Crea un nuevo usuario y le envía la contraseña
 exports.createUser = async (req, res, next) => {
   try {
-    const { nombre, apellido, email, telefono, cargo, tipo, empresa_id, sub_empresa_id } = req.body;
+    const { nombre, email, password, tipo, empresa_id, sub_empresa_id } = req.body;
+    
+    // Hash de contraseña
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(password, salt);
 
-    if (!nombre || !apellido || !email || !tipo) {
-      return res.status(400).json({ ok: false, error: "Campos requeridos faltantes" });
-    }
-
-    // Regla de Seguridad
-    if (req.user.tipo === 'Admin') {
-      if (tipo === 'SuperAdmin' || tipo === 'Admin') {
-         return res.status(403).json({ ok: false, error: "Un Admin solo puede invitar Gerentes y Clientes" });
-      }
-      if (empresa_id !== req.user.empresa_id) {
-        return res.status(403).json({ ok: false, error: "No puedes asignar usuarios a una empresa ajena" });
-      }
-    }
-
-    if (tipo === 'Gerente' && !sub_empresa_id) {
-       return res.status(400).json({ ok: false, error: "Un Gerente debe obligatoriamente asignarse a una Sub-Empresa" });
-    }
-
-    const newId = 'U' + crypto.randomBytes(3).toString('hex');
-
-    // Insertar en Base de Datos incluyendo sub_empresa_id (sin clave asignada)
-    await db.query(
-      `INSERT INTO usuario (id, nombre, apellido, email, telefono, cargo, tipo, empresa_id, sub_empresa_id, password_hash)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, NULL)`,
-      [newId, nombre, apellido, email, telefono, cargo, tipo, empresa_id || null, sub_empresa_id || null]
+    const { rows } = await db.query(
+      'INSERT INTO usuario (nombre, email, password, tipo, empresa_id, sub_empresa_id) VALUES ($1, $2, $3, $4, $5, $6) RETURNING id, nombre, email, tipo',
+      [nombre, email, hashedPassword, tipo, empresa_id, sub_empresa_id]
     );
 
-    res.status(201).json({
-      ok: true,
-      message: "Usuario pre-registrado exitosamente en la base de datos."
+    const newUser = rows[0];
+
+    // DISPARAR ENVÍO DE CORREO (Async)
+    // No bloqueamos la respuesta del API, el correo se envía en segundo plano
+    emailService.sendWelcomeEmail(email, nombre, password).catch(err => {
+      console.error('Error al enviar correo de bienvenida:', err);
     });
-  } catch (error) {
-    // Si viola la restricción UNIQUE del correo
-    if (error.code === '23505') {
-      return res.status(400).json({ ok: false, error: "El correo electrónico ya está registrado." });
-    }
-    next(error);
+
+    res.status(201).json({ ok: true, data: newUser });
+  } catch (err) {
+    next(err);
+  }
+};
+
+exports.deleteUser = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    await db.query('DELETE FROM usuario WHERE id = $1', [id]);
+    res.json({ ok: true, message: 'Usuario eliminado' });
+  } catch (err) {
+    next(err);
   }
 };

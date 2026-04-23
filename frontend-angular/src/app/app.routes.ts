@@ -1,6 +1,8 @@
 import { Routes } from '@angular/router';
 import { authGuard, publicGuard } from './guards/auth.guard';
 
+import { LayoutComponent } from './components/layout/layout';
+
 export const routes: Routes = [
   {
     path: 'login',
@@ -8,19 +10,24 @@ export const routes: Routes = [
     canActivate: [publicGuard]
   },
   {
-    path: 'companies',
-    loadComponent: () => import('./pages/companies/companies').then(m => m.CompaniesComponent),
-    canActivate: [authGuard]
-  },
-  {
-    path: 'dashboard',
-    loadComponent: () => import('./pages/dashboard/dashboard').then(m => m.DashboardComponent),
-    canActivate: [authGuard]
-  },
-  {
-    path: 'users',
-    loadComponent: () => import('./pages/user-management/user-management').then(m => m.UserManagementComponent),
-    canActivate: [authGuard]
+    path: '',
+    component: LayoutComponent,
+    canActivate: [authGuard],
+    children: [
+      {
+        path: 'companies',
+        loadComponent: () => import('./pages/companies/companies').then(m => m.CompaniesComponent)
+      },
+      {
+        path: 'dashboard',
+        loadComponent: () => import('./pages/dashboard/dashboard').then(m => m.DashboardComponent)
+      },
+      {
+        path: 'users',
+        loadComponent: () => import('./pages/user-management/user-management').then(m => m.UserManagementComponent)
+      },
+      { path: '', redirectTo: 'companies', pathMatch: 'full' }
+    ]
   },
   { path: '**', redirectTo: 'companies' }
 ];

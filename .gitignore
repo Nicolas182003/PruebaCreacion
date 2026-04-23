@@ -1,29 +1,14 @@
-# Dependencias de Node.js
 node_modules/
-
-# Variables de entorno (contienen claves secretas)
+dist/
+.angular/
 .env
-
-# Logs
 *.log
 npm-debug.log*
-
-# Archivos del sistema operativo
-.DS_Store
-Thumbs.db
-
-# Archivos de prueba temporal
-test_api.js
-test_db.js
-test_token.js
-
-# Datos persistentes de Docker (volúmenes locales)
-timescaledb_data/
-pgadmin_data/
-
-# Build de producción del frontend
-frontend-app/dist/
-
-# Carpetas de IDE
+yarn-debug.log*
+yarn-error.log*
 .vscode/
 .idea/
+.DS_Store
+package-lock.json
+*.tmp
+temp/

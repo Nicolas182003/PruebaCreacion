@@ -15,6 +15,7 @@ const catalogRoutes = require("./routes/catalogRoutes");
 const metricsRoutes = require("./routes/metricsRoutes");
 const authRoutes = require("./routes/authRoutes");
 const userRoutes = require("./routes/userRoutes");
+const companyRoutes = require("./routes/companyRoutes");
 const errorMiddleware = require("./middlewares/errorMiddleware");
 
 const app = express();
@@ -58,6 +59,7 @@ app.use("/api", catalogRoutes);
 app.use("/api/metrics", metricsRoutes);
 app.use("/api/auth", authRoutes);
 app.use("/api/users", userRoutes);
+app.use("/api/companies", companyRoutes);
 
 
 /* Servir archivos estáticos desde la carpeta demo */
