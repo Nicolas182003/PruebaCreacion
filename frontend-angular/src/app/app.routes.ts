@@ -1,5 +1,5 @@
 import { Routes } from '@angular/router';
-import { authGuard, publicGuard } from './guards/auth.guard';
+import { authGuard, publicGuard, roleGuard } from './guards/auth.guard';
 
 import { LayoutComponent } from './components/layout/layout';
 
@@ -24,6 +24,7 @@ export const routes: Routes = [
       },
       {
         path: 'users',
+        canActivate: [roleGuard('SuperAdmin', 'Admin')],
         loadComponent: () => import('./pages/user-management/user-management').then(m => m.UserManagementComponent)
       },
       { path: '', redirectTo: 'companies', pathMatch: 'full' }

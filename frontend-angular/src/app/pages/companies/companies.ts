@@ -5,12 +5,12 @@ import { CompanyService } from '../../services/company.service';
 import { AuthService } from '../../services/auth.service';
 import { SiteCardComponent } from '../../components/ui/site-card';
 import { KpiCardComponent } from '../../components/ui/kpi-card';
-import { UserManagementComponent } from '../../components/ui/user-management';
+import { UserManagementComponent as UserMgmtUIComponent } from '../../components/ui/user-management';
 
 @Component({
   selector: 'app-companies',
   standalone: true,
-  imports: [CommonModule, FormsModule, SiteCardComponent, KpiCardComponent, UserManagementComponent],
+  imports: [CommonModule, FormsModule, SiteCardComponent, KpiCardComponent, UserMgmtUIComponent],
   templateUrl: './companies.html'
 })
 export class CompaniesComponent implements OnInit {
@@ -50,7 +50,7 @@ export class CompaniesComponent implements OnInit {
     for (const comp of tree) {
       const sub = comp.subCompanies?.find((s: any) => s.id === id);
       if (sub) {
-        this.selectedSubCompany.set(sub);
+        this.selectedSubCompany.set({ ...sub, empresa_id: comp.id });
         break;
       }
     }
@@ -65,18 +65,35 @@ export class CompaniesComponent implements OnInit {
   }
 
   setActiveTab(tab: string): void {
-    console.log('CAMBIANDO A PESTAÑA:', tab);
     this.activeTab.set(tab);
   }
 
   get user() { return this.auth.user(); }
 
+  /**
+   * Tabs filtrados por rol:
+   *  - SuperAdmin/Admin: General, Instalaciones, Contactos, Usuarios
+   *  - Gerente: General, Instalaciones, Contactos, Equipo (solo lectura)
+   *  - Cliente: General, Instalaciones
+   */
   get tabs() {
-    return [
+    const base = [
       { key: 'general', label: 'General', icon: 'info' },
       { key: 'instalaciones', label: 'Instalaciones', icon: 'factory' },
-      { key: 'contactos', label: 'Contactos', icon: 'contact_phone' },
-      { key: 'usuarios', label: 'NUEVO USUARIO', icon: 'person_add' }
     ];
+
+    if (this.auth.isCliente()) {
+      return base;
+    }
+
+    base.push({ key: 'contactos', label: 'Contactos', icon: 'contact_phone' });
+
+    if (this.auth.canManageUsers()) {
+      base.push({ key: 'usuarios', label: 'Gestión Usuarios', icon: 'person_add' });
+    } else if (this.auth.isGerente()) {
+      base.push({ key: 'usuarios', label: 'Mi Equipo', icon: 'group' });
+    }
+
+    return base;
   }
 }
