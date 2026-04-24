@@ -43,7 +43,9 @@ import { AuthService } from '../../services/auth.service';
               <div class="space-y-1.5">
                 <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest">1. Seleccione el Perfil de Acceso *</label>
                 <select required [(ngModel)]="newUser.tipo" name="tipo" class="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-primary-container/20 outline-none transition-all text-sm font-black text-primary">
-                  <option value="Admin">Administrador (Control Total {{ companyName() }})</option>
+                  @if (auth.isAdmin() || auth.isSuperAdmin()) {
+                    <option value="Admin">Administrador (Control Total {{ companyName() }})</option>
+                  }
                   <option value="Gerente">Gerente (Encargado {{ subName() }})</option>
                   <option value="Cliente">Cliente (Lectura {{ subName() }})</option>
                 </select>
@@ -244,7 +246,7 @@ export class UserManagementComponent implements OnInit, OnChanges {
     const data = {
       ...this.newUser,
       empresa_id: this.empresaId,
-      sub_empresa_id: (this.newUser.tipo === 'Admin') ? '' : this.subEmpresaId,
+      sub_empresa_id: (this.newUser.tipo === 'Admin' && !this.auth.isGerente()) ? '' : this.subEmpresaId,
       password: Math.random().toString(36).slice(-8)
     };
 

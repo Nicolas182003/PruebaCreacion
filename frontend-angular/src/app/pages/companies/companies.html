@@ -107,13 +107,13 @@
     </div>
   }
 
-  <!-- Tab Content: Usuarios -->
-  @if (activeTab() === 'usuarios') {
+  <!-- Tab Content: Usuarios (Admin/SuperAdmin/Gerente — formulario y lista) -->
+  @if (activeTab() === 'usuarios' && (auth.canManageUsers() || auth.isGerente())) {
     <div class="animate-in fade-in duration-500">
       <app-user-management 
         [subEmpresaId]="companyService.selectedSubCompanyId() || ''"
         [empresaId]="selectedSubCompany()?.empresa_id || ''"
-        [readOnly]="!auth.canManageUsers()"
+        [readOnly]="false"
       ></app-user-management>
     </div>
   }

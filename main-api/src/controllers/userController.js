@@ -119,6 +119,15 @@ exports.createUser = async (req, res, next) => {
       if (tipo === 'SuperAdmin') {
         return res.status(403).json({ ok: false, error: 'No puede crear usuarios SuperAdmin.' });
       }
+    } else if (currentUser.tipo === 'Gerente') {
+      // Validar que Gerente solo cree usuarios en su propia sub-empresa
+      if ((empresa_id && empresa_id !== currentUser.empresa_id) || (sub_empresa_id && sub_empresa_id !== currentUser.sub_empresa_id)) {
+        return res.status(403).json({ ok: false, error: 'No puede crear usuarios fuera de su división.' });
+      }
+      // Gerente solo puede crear Gerentes o Clientes
+      if (tipo === 'SuperAdmin' || tipo === 'Admin') {
+        return res.status(403).json({ ok: false, error: 'No tiene permisos para crear este rol.' });
+      }
     }
 
     const newId = 'U' + crypto.randomBytes(3).toString('hex').toUpperCase();
@@ -127,14 +136,15 @@ exports.createUser = async (req, res, next) => {
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(rawPassword, salt);
 
-    // Usar la empresa del Admin si no se especifica
-    const finalEmpresaId = empresa_id || currentUser.empresa_id || null;
+    // Usar la empresa/sub-empresa del creador si no se especifica o si es Gerente
+    const finalEmpresaId = currentUser.tipo === 'Gerente' ? currentUser.empresa_id : (empresa_id || currentUser.empresa_id || null);
+    const finalSubEmpresaId = currentUser.tipo === 'Gerente' ? currentUser.sub_empresa_id : (sub_empresa_id || null);
 
     const { rows } = await db.query(
       `INSERT INTO usuario (id, nombre, apellido, email, telefono, cargo, tipo, empresa_id, sub_empresa_id, otp_hash, otp_expires_at)
        VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10, NOW() + INTERVAL '72 hours')
        RETURNING id, nombre, apellido, email, tipo`,
-      [newId, nombre, apellido, email, telefono || null, cargo || null, tipo, finalEmpresaId, sub_empresa_id || null, hashedPassword]
+      [newId, nombre, apellido, email, telefono || null, cargo || null, tipo, finalEmpresaId, finalSubEmpresaId, hashedPassword]
     );
 
     emailService.sendWelcomeEmail(email, nombre, rawPassword).catch(err => {
@@ -164,14 +174,25 @@ exports.deleteUser = async (req, res, next) => {
     const { id } = req.params;
     const currentUser = req.user;
 
-    // Admin solo puede eliminar usuarios de su empresa
-    if (currentUser.tipo === 'Admin') {
-      const check = await db.query('SELECT empresa_id FROM usuario WHERE id = $1', [id]);
+    // Admin o Gerente solo pueden eliminar usuarios de su jurisdicción
+    if (currentUser.tipo === 'Admin' || currentUser.tipo === 'Gerente') {
+      const check = await db.query('SELECT empresa_id, sub_empresa_id, tipo FROM usuario WHERE id = $1', [id]);
       if (check.rows.length === 0) {
         return res.status(404).json({ ok: false, error: 'Usuario no encontrado' });
       }
-      if (check.rows[0].empresa_id !== currentUser.empresa_id) {
-        return res.status(403).json({ ok: false, error: 'No puede eliminar usuarios de otra empresa' });
+      const targetUser = check.rows[0];
+
+      if (currentUser.tipo === 'Admin') {
+        if (targetUser.empresa_id !== currentUser.empresa_id) {
+          return res.status(403).json({ ok: false, error: 'No puede eliminar usuarios de otra empresa' });
+        }
+      } else if (currentUser.tipo === 'Gerente') {
+        if (targetUser.sub_empresa_id !== currentUser.sub_empresa_id) {
+          return res.status(403).json({ ok: false, error: 'No puede eliminar usuarios de otra división' });
+        }
+        if (targetUser.tipo === 'SuperAdmin' || targetUser.tipo === 'Admin') {
+          return res.status(403).json({ ok: false, error: 'No tiene permiso para eliminar a este usuario' });
+        }
       }
     }
 
