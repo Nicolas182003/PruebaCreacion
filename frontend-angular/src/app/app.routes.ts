@@ -15,6 +15,10 @@ export const routes: Routes = [
     canActivate: [authGuard],
     children: [
       {
+        path: 'companies/:siteId/water',
+        loadComponent: () => import('./pages/companies/company-site-water-detail').then(m => m.CompanySiteWaterDetailComponent)
+      },
+      {
         path: 'companies',
         loadComponent: () => import('./pages/companies/companies').then(m => m.CompaniesComponent)
       },
