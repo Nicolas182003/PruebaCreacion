@@ -40,7 +40,7 @@ services:
     build: ./frontend-angular
     container_name: emeltec-frontend
     ports:
-      - "4200:80"
+      - "5173:80"
     depends_on:
       - main-api
     restart: unless-stopped
