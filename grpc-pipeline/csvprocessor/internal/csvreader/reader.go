@@ -47,14 +47,17 @@ func ReadRows(filePath string) ([]RawRow, error) {
 			continue
 		}
 
-		// Ignora el encabezado clásico del CSV.
-		if strings.EqualFold(line, "Tagname,TimeStamp,Value,DataQuality") {
+		// Ignora el encabezado (con coma o punto y coma)
+		if strings.EqualFold(line, "Tagname,TimeStamp,Value,DataQuality") || strings.EqualFold(line, "Tagname;TimeStamp;Value;DataQuality") {
 			continue
 		}
 
-		// Divide la línea en 4 partes como máximo.
-		// Esto es suficiente para este formato, ya que no esperamos comas internas.
+		// Divide la línea. Intentamos primero con coma, si no da 4 partes, intentamos con punto y coma.
 		parts := strings.SplitN(line, ",", 4)
+		if len(parts) != 4 {
+			parts = strings.SplitN(line, ";", 4)
+		}
+		
 		if len(parts) != 4 {
 			return nil, fmt.Errorf("línea inválida: %s", line)
 		}
