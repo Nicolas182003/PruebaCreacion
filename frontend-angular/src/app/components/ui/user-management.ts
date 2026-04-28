@@ -94,6 +94,10 @@ import { AuthService } from '../../services/auth.service';
                 <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Correo Electrónico *</label>
                 <input required type="email" [(ngModel)]="newUser.email" name="email" class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-primary-container/20 outline-none transition-all text-sm font-bold" placeholder="usuario@correo.com" />
               </div>
+              <div class="space-y-1.5 md:col-span-2">
+                <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Cargo *</label>
+                <input required [(ngModel)]="newUser.cargo" name="cargo" class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-primary-container/20 outline-none transition-all text-sm" placeholder="Ej. Encargado de sector de aguas" />
+              </div>
             </div>
 
             <div class="pt-6 border-t border-slate-100 flex justify-end">

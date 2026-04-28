@@ -12,15 +12,15 @@ export interface CompaniesTabItem {
   standalone: true,
   imports: [CommonModule],
   template: `
-    <div class="flex gap-4 mb-8">
+    <div [class]="getContainerClass()">
       @for (tab of tabs; track tab.key) {
         <button
           type="button"
           (click)="selectTab(tab.key)"
-          [class]="'px-4 py-2 text-xs font-black rounded-lg transition-all flex items-center gap-2 ' + (activeTab === tab.key ? 'bg-white shadow-sm text-primary-container ring-1 ring-slate-200' : 'text-slate-400 hover:bg-slate-100')"
+          [class]="getButtonClass(tab.key)"
         >
-          <span class="material-symbols-outlined text-lg">{{ tab.icon }}</span>
-          <span class="uppercase tracking-widest">{{ tab.label }}</span>
+          <span [class]="'material-symbols-outlined ' + getIconClass()">{{ tab.icon }}</span>
+          <span [class]="getLabelClass()">{{ tab.label }}</span>
         </button>
       }
     </div>
@@ -29,10 +29,49 @@ export interface CompaniesTabItem {
 export class CompaniesTabNavComponent {
   @Input() tabs: CompaniesTabItem[] = [];
   @Input() activeTab = '';
+  @Input() variant: 'default' | 'superadmin' = 'default';
 
   @Output() activeTabChange = new EventEmitter<string>();
 
   selectTab(tab: string): void {
     this.activeTabChange.emit(tab);
+  }
+
+  getContainerClass(): string {
+    if (this.variant === 'superadmin') {
+      return 'mb-6 flex flex-wrap items-center gap-1 border-b border-slate-200/90 pb-2';
+    }
+
+    return 'mb-8 flex flex-wrap gap-4';
+  }
+
+  getButtonClass(tabKey: string): string {
+    const isActive = this.activeTab === tabKey;
+
+    if (this.variant === 'superadmin') {
+      return [
+        'group relative inline-flex items-center gap-2 rounded-2xl px-3 py-2 text-sm font-semibold transition-all',
+        isActive
+          ? 'bg-white text-cyan-700 shadow-[0_8px_24px_rgba(14,116,144,0.08)] ring-1 ring-cyan-100'
+          : 'text-slate-400 hover:bg-white hover:text-slate-700',
+      ].join(' ');
+    }
+
+    return [
+      'flex items-center gap-2 rounded-lg px-4 py-2 text-xs font-black transition-all',
+      isActive
+        ? 'bg-white text-primary-container shadow-sm ring-1 ring-slate-200'
+        : 'text-slate-400 hover:bg-slate-100',
+    ].join(' ');
+  }
+
+  getLabelClass(): string {
+    return this.variant === 'superadmin'
+      ? 'tracking-tight'
+      : 'uppercase tracking-widest';
+  }
+
+  getIconClass(): string {
+    return this.variant === 'superadmin' ? 'text-[18px]' : 'text-lg';
   }
 }

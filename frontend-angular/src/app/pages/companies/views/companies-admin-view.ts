@@ -46,7 +46,11 @@ import { CompaniesTabItem, CompaniesTabNavComponent } from '../components/compan
       }
 
       @if (activeTab === 'contactos') {
-        <app-companies-contacts-panel />
+        <app-companies-contacts-panel
+          [empresaId]="empresaId"
+          [subEmpresaId]="subEmpresaId"
+          [selectedLabel]="selectedSubCompany?.nombre || ''"
+        />
       }
 
       @if (activeTab === 'usuarios') {

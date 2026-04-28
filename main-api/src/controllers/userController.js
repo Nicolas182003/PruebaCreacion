@@ -54,7 +54,7 @@ exports.getAllUsers = async (req, res, next) => {
       return res.status(403).json({ ok: false, error: 'No tiene permisos para ver usuarios' });
     }
 
-    let query = 'SELECT id, nombre, apellido, email, tipo, empresa_id, sub_empresa_id FROM usuario';
+    let query = 'SELECT id, nombre, apellido, email, telefono, cargo, tipo, empresa_id, sub_empresa_id FROM usuario';
     let conditions = [];
     let params = [];
 
@@ -143,7 +143,7 @@ exports.createUser = async (req, res, next) => {
     const { rows } = await db.query(
       `INSERT INTO usuario (id, nombre, apellido, email, telefono, cargo, tipo, empresa_id, sub_empresa_id, otp_hash, otp_expires_at)
        VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10, NOW() + INTERVAL '72 hours')
-       RETURNING id, nombre, apellido, email, tipo`,
+       RETURNING id, nombre, apellido, email, telefono, cargo, tipo`,
       [newId, nombre, apellido, email, telefono || null, cargo || null, tipo, finalEmpresaId, finalSubEmpresaId, hashedPassword]
     );
 

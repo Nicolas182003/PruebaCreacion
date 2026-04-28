@@ -18,7 +18,7 @@ import { SidebarComponent } from './sidebar/sidebar';
         <!-- Main Content Area -->
         <!-- pt-16 para compensar la altura del header (h-16) -->
         <!-- ml-[260px] para compensar el ancho del sidebar -->
-        <main class="flex-1 ml-[260px] pt-16 min-h-screen">
+        <main class="flex-1 ml-[220px] pt-16 min-h-screen">
           <div class="animate-in fade-in duration-500">
             <router-outlet></router-outlet>
           </div>
@@ -27,4 +27,4 @@ import { SidebarComponent } from './sidebar/sidebar';
     </div>
   `
 })
-export class LayoutComponent {}
+export class LayoutComponent { }

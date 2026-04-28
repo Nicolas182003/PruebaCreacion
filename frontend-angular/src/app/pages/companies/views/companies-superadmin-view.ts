@@ -20,16 +20,41 @@ import { CompaniesTabItem, CompaniesTabNavComponent } from '../components/compan
     UserManagementComponent,
   ],
   template: `
-    <div class="p-8">
-      <app-companies-page-header
-        [selectedSubCompany]="selectedSubCompany"
-        [sitesCount]="sites.length"
-        [showReportButton]="true"
-      />
+    <div class="min-h-full bg-[#f5f7fb] px-5 pb-8 pt-6 md:px-7 xl:px-8">
+      @if (activeTab === 'instalaciones') {
+        <div class="mb-6 flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
+          <div class="space-y-2">
+            <p class="text-[11px] font-black uppercase tracking-[0.24em] text-cyan-600/80">
+              {{ selectedSubCompany?.nombre || 'Division seleccionada' }}
+            </p>
+            <h1 class="text-[2rem] font-black leading-none tracking-tight text-slate-800">
+              Instalaciones
+            </h1>
+            <p class="text-sm text-slate-400">
+              {{ sites.length }} sitios registrados
+            </p>
+          </div>
+
+          <button
+            type="button"
+            class="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 shadow-[0_10px_25px_rgba(15,23,42,0.06)] transition-all hover:border-cyan-200 hover:text-cyan-700"
+          >
+            <span class="material-symbols-outlined text-lg">download</span>
+            Reporte
+          </button>
+        </div>
+      } @else {
+        <app-companies-page-header
+          [selectedSubCompany]="selectedSubCompany"
+          [sitesCount]="sites.length"
+          [showReportButton]="true"
+        />
+      }
 
       <app-companies-tab-nav
         [tabs]="tabs"
         [activeTab]="activeTab"
+        variant="superadmin"
         (activeTabChange)="activeTabChange.emit($event)"
       />
 
@@ -41,12 +66,19 @@ import { CompaniesTabItem, CompaniesTabNavComponent } from '../components/compan
         <app-companies-installations-panel
           [sites]="sites"
           [loading]="loading"
+          [contextLabel]="selectedSubCompany?.nombre || ''"
+          variant="superadmin"
           (siteSelected)="siteSelected.emit($event)"
         />
       }
 
       @if (activeTab === 'contactos') {
-        <app-companies-contacts-panel />
+        <app-companies-contacts-panel
+          [empresaId]="empresaId"
+          [subEmpresaId]="subEmpresaId"
+          [selectedLabel]="selectedSubCompany?.nombre || ''"
+          variant="superadmin"
+        />
       }
 
       @if (activeTab === 'usuarios') {

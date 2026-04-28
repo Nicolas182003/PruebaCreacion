@@ -1,7 +1,6 @@
 import { Component, inject, signal, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { HttpClient } from '@angular/common/http';
-import { SidebarComponent } from '../../components/sidebar/sidebar';
 import { MetricCardComponent } from '../../components/metric-card/metric-card';
 import { ChartCardComponent } from '../../components/chart-card/chart-card';
 import { AuthService } from '../../services/auth.service';
@@ -9,7 +8,7 @@ import { AuthService } from '../../services/auth.service';
 @Component({
   selector: 'app-dashboard',
   standalone: true,
-  imports: [CommonModule, SidebarComponent, MetricCardComponent, ChartCardComponent],
+  imports: [CommonModule, MetricCardComponent, ChartCardComponent],
   templateUrl: './dashboard.html'
 })
 export class DashboardComponent implements OnInit, OnDestroy {
