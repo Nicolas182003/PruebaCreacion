@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, inject, Input, OnChanges, signal, SimpleChanges } from '@angular/core';
+import { Component, EventEmitter, inject, Input, OnChanges, Output, signal, SimpleChanges } from '@angular/core';
 import { UserService } from '../../../services/user.service';
 
 @Component({
@@ -7,24 +7,14 @@ import { UserService } from '../../../services/user.service';
   standalone: true,
   imports: [CommonModule],
   template: `
-    <section [class]="variant === 'superadmin' ? 'animate-in fade-in duration-500' : 'bg-white border border-slate-200 rounded-3xl p-8 shadow-sm animate-in fade-in duration-500'">
-      @if (variant === 'superadmin') {
-        <div class="mb-6 flex flex-col gap-2">
-          <p class="text-[11px] font-black uppercase tracking-[0.22em] text-cyan-600/80">
-            {{ selectedLabel || 'División seleccionada' }}
-          </p>
-          <h3 class="text-[2rem] font-black leading-none tracking-tight text-slate-800">Contactos</h3>
-          <p class="text-sm text-slate-400">
-            {{ contacts().length }} personas registradas
-          </p>
-        </div>
-      } @else {
+    <section [class]="variant === 'superadmin' ? 'animate-in fade-in duration-500' : 'animate-in fade-in duration-500 rounded-3xl border border-slate-200 bg-white p-8 shadow-sm'">
+      @if (variant !== 'superadmin') {
         <div class="mb-8">
           <h3 class="mb-2 border-l-4 border-primary-container pl-4 text-sm font-black uppercase tracking-widest text-primary">
             Contactos
           </h3>
           <p class="pl-4 text-sm text-slate-400">
-            Personal asociado a {{ selectedLabel || 'la división seleccionada' }}
+            Personal asociado a {{ selectedLabel || 'la division seleccionada' }}
           </p>
         </div>
       }
@@ -33,18 +23,17 @@ import { UserService } from '../../../services/user.service';
         <div class="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
           @for (item of skeletonItems; track item) {
             <div [class]="getCardShellClass()">
-              <div class="mb-5 flex items-start justify-between gap-3">
-                <div class="flex items-center gap-3">
-                  <div class="skeleton h-11 w-11 rounded-2xl"></div>
-                  <div class="space-y-2">
-                    <div class="skeleton h-4 w-28 rounded-full"></div>
-                    <div class="skeleton h-3 w-20 rounded-full"></div>
-                  </div>
+              <div class="mb-4 flex items-start gap-3">
+                <div class="skeleton h-10 w-10 rounded-xl"></div>
+                <div class="space-y-2">
+                  <div class="skeleton h-4 w-28 rounded-full"></div>
+                  <div class="skeleton h-3 w-20 rounded-full"></div>
                 </div>
               </div>
-              <div class="space-y-3">
-                <div class="skeleton h-10 w-full rounded-2xl"></div>
-                <div class="skeleton h-10 w-full rounded-2xl"></div>
+              <div class="space-y-2.5">
+                <div class="skeleton h-10 w-full rounded-xl"></div>
+                <div class="skeleton h-10 w-full rounded-xl"></div>
+                <div class="skeleton h-10 w-full rounded-xl"></div>
               </div>
             </div>
           }
@@ -109,7 +98,7 @@ import { UserService } from '../../../services/user.service';
           <span class="material-symbols-outlined mb-4 text-5xl text-slate-300">contact_phone</span>
           <p class="text-sm font-bold uppercase tracking-[0.18em] text-slate-400">Sin contactos registrados</p>
           <p class="mt-2 max-w-md text-sm text-slate-400">
-            No hay personas asociadas a {{ selectedLabel || 'esta división' }} por ahora.
+            No hay personas asociadas a {{ selectedLabel || 'esta division' }} por ahora.
           </p>
         </div>
       }
@@ -124,6 +113,8 @@ export class CompaniesContactsPanelComponent implements OnChanges {
   @Input() selectedLabel = '';
   @Input() variant: 'default' | 'superadmin' = 'default';
 
+  @Output() contactsCountChange = new EventEmitter<number>();
+
   readonly contacts = signal<any[]>([]);
   readonly loading = signal(false);
   readonly skeletonItems = Array.from({ length: 3 }, (_, index) => index);
@@ -135,12 +126,11 @@ export class CompaniesContactsPanelComponent implements OnChanges {
   }
 
   loadContacts(): void {
-    const filters = this.empresaId
-      ? { empresa_id: this.empresaId }
-      : null;
+    const filters = this.empresaId ? { empresa_id: this.empresaId } : null;
 
     if (!filters) {
       this.contacts.set([]);
+      this.contactsCountChange.emit(0);
       return;
     }
 
@@ -153,10 +143,12 @@ export class CompaniesContactsPanelComponent implements OnChanges {
           : users;
 
         this.contacts.set(filteredUsers);
+        this.contactsCountChange.emit(filteredUsers.length);
         this.loading.set(false);
       },
       error: () => {
         this.contacts.set([]);
+        this.contactsCountChange.emit(0);
         this.loading.set(false);
       },
     });
@@ -175,7 +167,7 @@ export class CompaniesContactsPanelComponent implements OnChanges {
   }
 
   getContactPhone(contact: any): string {
-    return contact?.telefono?.trim?.() || 'Sin número registrado';
+    return contact?.telefono?.trim?.() || 'Sin numero registrado';
   }
 
   getContactEmail(contact: any): string {
